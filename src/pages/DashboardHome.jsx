@@ -11,13 +11,56 @@ import {
   ChevronDown,
   ArrowRight,
 } from "lucide-react";
-import Layout from "../components/Layout";
 
-function Dashboard() {
+import { useApp } from "../context/AppContext";
+
+function DashboardHome() {
+  const {
+    customers,
+    policies,
+    claims,
+    renewals,
+  } = useApp();
+
+  const totalPolicies = policies.length;
+
+  const activePolicies = policies.filter(
+    (policy) => policy.status === "Active"
+  ).length;
+
+  const expiringPolicies = renewals.filter(
+    (renewal) =>
+      renewal.status === "Due Soon" ||
+      renewal.status === "Expired"
+  ).length;
+
+  const totalCustomers = customers.length;
+
+  const totalPremium = policies.reduce(
+    (total, policy) => total + Number(policy.premium || 0),
+    0
+  );
+
+  const approvedClaims = claims.filter(
+    (claim) => claim.status === "Approved"
+  ).length;
+
+  const pendingClaims = claims.filter(
+    (claim) =>
+      claim.status === "Pending" ||
+      claim.status === "Under Review"
+  ).length;
+
+  const rejectedClaims = claims.filter(
+    (claim) => claim.status === "Rejected"
+  ).length;
+
+  const totalClaims = claims.length;
+
   const stats = [
     {
       title: "Total Policies",
-      value: "248",
+      value: totalPolicies,
       change: "12%",
       icon: FileText,
       color: "blue",
@@ -25,7 +68,7 @@ function Dashboard() {
     },
     {
       title: "Active Policies",
-      value: "215",
+      value: activePolicies,
       change: "10%",
       icon: ShieldCheck,
       color: "green",
@@ -33,7 +76,7 @@ function Dashboard() {
     },
     {
       title: "Expiring Policies",
-      value: "18",
+      value: expiringPolicies,
       change: "5%",
       icon: Clock,
       color: "orange",
@@ -41,7 +84,7 @@ function Dashboard() {
     },
     {
       title: "Total Customers",
-      value: "186",
+      value: totalCustomers,
       change: "8%",
       icon: Users,
       color: "purple",
@@ -49,21 +92,31 @@ function Dashboard() {
     },
   ];
 
-  const policies = [
-    ["PL-2026-0012", "Rahul Nair", "Health", "Active", "02 Sep 2026"],
-    ["PL-2026-0011", "Anita Joseph", "Life", "Active", "01 Sep 2026"],
-    ["PL-2026-0010", "Sajith Kumar", "Motor", "Active", "30 Aug 2026"],
-    ["PL-2026-0009", "Divya Thomas", "Health", "Active", "28 Aug 2026"],
-    ["PL-2026-0008", "Ramesh Babu", "Home", "Active", "25 Aug 2026"],
-  ];
+  const recentPolicies = [...policies].slice(-5).reverse();
 
-  const renewals = [
-    ["Anita Joseph", "Health", "05 Sep 2026"],
-    ["Sajith Kumar", "Motor", "08 Sep 2026"],
-    ["Divya Thomas", "Life", "12 Sep 2026"],
-    ["Ramesh Babu", "Home", "18 Sep 2026"],
-    ["Deepa Suresh", "Health", "22 Sep 2026"],
-  ];
+  const upcomingRenewals = [...renewals]
+    .filter(
+      (renewal) =>
+        renewal.status === "Due Soon" ||
+        renewal.status === "Upcoming"
+    )
+    .slice(0, 5);
+
+  const recentCustomers = [...customers].slice(-5).reverse();
+
+  const getCustomerName = (customerId) => {
+    const customer = customers.find(
+      (item) => item.customerId === customerId
+    );
+
+    return customer?.name || "Unknown";
+  };
+
+  const getCustomerPolicy = (customerId) => {
+    return policies.find(
+      (policy) => policy.customerId === customerId
+    );
+  };
 
   const iconStyles = {
     blue: "bg-[#e6f0ff] text-[#2869df]",
@@ -73,8 +126,11 @@ function Dashboard() {
   };
 
   return (
-    <Layout>
-      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <>
+      <div
+        id="top"
+        className="scroll-mt-24 mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div>
           <h1 className="text-[23px] font-bold leading-7 tracking-[-0.3px] text-[#102b52] sm:text-[25px]">
             Good Morning, Joyal 👋
@@ -144,7 +200,10 @@ function Dashboard() {
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.35fr_1fr]">
-        <div className="rounded-[10px] border border-[#e7ebf1] bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] sm:p-5">
+        <div
+          id="reports"
+          className="scroll-mt-24 rounded-[10px] border border-[#e7ebf1] bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] sm:p-5"
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TrendingUp
@@ -165,12 +224,12 @@ function Dashboard() {
 
           <div className="mt-4">
             <h3 className="text-[24px] font-bold text-[#102b52]">
-              ₹ 4,85,000
+              ₹ {totalPremium.toLocaleString("en-IN")}
             </h3>
 
             <p className="mt-1 flex items-center gap-1 text-[10px] text-[#20a46b]">
               <ArrowUp size={11} />
-              15% from last month
+              Total premium from policies
             </p>
           </div>
 
@@ -293,7 +352,10 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-[10px] border border-[#e7ebf1] bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] sm:p-5">
+        <div
+          id="claims"
+          className="scroll-mt-24 rounded-[10px] border border-[#e7ebf1] bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] sm:p-5"
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShieldCheck
@@ -317,14 +379,17 @@ function Dashboard() {
               <div
                 className="h-full w-full rounded-full"
                 style={{
-                  background:
-                    "conic-gradient(#36b87e 0deg 247deg, #f4c644 247deg 315deg, #ef6666 315deg 360deg)",
+                  background: `conic-gradient(
+                    #36b87e 0deg ${totalClaims ? (approvedClaims / totalClaims) * 360 : 0}deg,
+                    #f4c644 ${totalClaims ? (approvedClaims / totalClaims) * 360 : 0}deg ${totalClaims ? ((approvedClaims + pendingClaims) / totalClaims) * 360 : 0}deg,
+                    #ef6666 ${totalClaims ? ((approvedClaims + pendingClaims) / totalClaims) * 360 : 0}deg 360deg
+                  )`,
                 }}
               />
 
               <div className="absolute inset-[23px] flex flex-col items-center justify-center rounded-full bg-white">
                 <span className="text-[21px] font-bold text-[#102b52]">
-                  32
+                  {totalClaims}
                 </span>
 
                 <span className="text-[10px] text-[#7c8795]">
@@ -342,7 +407,7 @@ function Dashboard() {
                 </span>
 
                 <span className="rounded-md bg-[#eaf8f1] px-2 py-1 text-[10px] font-medium text-[#20a46b]">
-                  22
+                  {approvedClaims}
                 </span>
               </div>
 
@@ -354,7 +419,7 @@ function Dashboard() {
                 </span>
 
                 <span className="rounded-md bg-[#fff8df] px-2 py-1 text-[10px] font-medium text-[#d99f22]">
-                  6
+                  {pendingClaims}
                 </span>
               </div>
 
@@ -366,7 +431,7 @@ function Dashboard() {
                 </span>
 
                 <span className="rounded-md bg-[#fff0f0] px-2 py-1 text-[10px] font-medium text-[#e15c5c]">
-                  4
+                  {rejectedClaims}
                 </span>
               </div>
             </div>
@@ -375,7 +440,10 @@ function Dashboard() {
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <div className="overflow-hidden rounded-[10px] border border-[#e7ebf1] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
+        <div
+          id="policies"
+          className="scroll-mt-24 overflow-hidden rounded-[10px] border border-[#e7ebf1] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.03)]"
+        >
           <div className="flex items-center justify-between border-b border-[#edf0f4] px-4 py-3.5 sm:px-5">
             <div className="flex items-center gap-2">
               <FileText
@@ -420,31 +488,31 @@ function Dashboard() {
               </thead>
 
               <tbody>
-                {policies.map((policy) => (
+                {recentPolicies.map((policy) => (
                   <tr
-                    key={policy[0]}
+                    key={policy.id}
                     className="border-t border-[#f0f2f5] text-[11px] text-[#536274]"
                   >
                     <td className="px-4 py-2.5 font-medium text-[#44536a]">
-                      {policy[0]}
+                      {policy.policyNo}
                     </td>
 
                     <td className="px-4 py-2.5">
-                      {policy[1]}
+                      {getCustomerName(policy.customerId)}
                     </td>
 
                     <td className="px-4 py-2.5">
-                      {policy[2]}
+                      {policy.type}
                     </td>
 
                     <td className="px-4 py-2.5">
                       <span className="rounded-md bg-[#e7f8f0] px-2 py-1 text-[10px] font-medium text-[#20a46b]">
-                        {policy[3]}
+                        {policy.status}
                       </span>
                     </td>
 
                     <td className="px-4 py-2.5">
-                      {policy[4]}
+                      {policy.startDate}
                     </td>
                   </tr>
                 ))}
@@ -453,7 +521,10 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-[10px] border border-[#e7ebf1] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
+        <div
+          id="renewals"
+          className="scroll-mt-24 overflow-hidden rounded-[10px] border border-[#e7ebf1] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.03)]"
+        >
           <div className="flex items-center justify-between border-b border-[#edf0f4] px-4 py-3.5 sm:px-5">
             <div className="flex items-center gap-2">
               <CalendarDays
@@ -490,30 +561,28 @@ function Dashboard() {
               </thead>
 
               <tbody>
-                {renewals.map((renewal) => (
+                {upcomingRenewals.map((renewal) => (
                   <tr
-                    key={renewal[0]}
+                    key={renewal.id}
                     className="border-t border-[#f0f2f5] text-[11px] text-[#536274]"
                   >
                     <td className="px-5 py-2.5">
-                      {renewal[0]}
+                      {renewal.customer}
                     </td>
 
                     <td className="px-5 py-2.5">
-                      {renewal[1]}
+                      {renewal.type}
                     </td>
 
                     <td className="px-5 py-2.5">
                       <span
                         className={`rounded-md px-2 py-1 text-[10px] font-medium ${
-                          renewal[2].includes("05") ||
-                          renewal[2].includes("08") ||
-                          renewal[2].includes("12")
+                          renewal.status === "Due Soon"
                             ? "bg-[#fff0f0] text-[#e15c5c]"
                             : "bg-[#e7f8f0] text-[#20a46b]"
                         }`}
                       >
-                        {renewal[2]}
+                        {renewal.expiry}
                       </span>
                     </td>
                   </tr>
@@ -521,6 +590,91 @@ function Dashboard() {
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <div
+        id="customers"
+        className="scroll-mt-24 mt-5 overflow-hidden rounded-[10px] border border-[#e7ebf1] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.03)]"
+      >
+        <div className="flex items-center justify-between border-b border-[#edf0f4] px-4 py-3.5 sm:px-5">
+          <div className="flex items-center gap-2">
+            <Users
+              size={17}
+              className="text-[#2869df]"
+            />
+
+            <div>
+              <h2 className="text-[13px] font-semibold text-[#1a3151] sm:text-[14px]">
+                Customers
+              </h2>
+
+              <p className="mt-0.5 text-[10px] text-[#8792a1]">
+                Recent customers
+              </p>
+            </div>
+          </div>
+
+          <span className="rounded-md bg-[#e6f0ff] px-2.5 py-1 text-[10px] font-medium text-[#2869df]">
+            {totalCustomers} Total
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[650px]">
+            <thead>
+              <tr className="bg-[#fafbfd] text-left text-[10px] text-[#7a8797]">
+                <th className="px-5 py-3 font-medium">
+                  Customer
+                </th>
+
+                <th className="px-5 py-3 font-medium">
+                  Policy No
+                </th>
+
+                <th className="px-5 py-3 font-medium">
+                  Policy Type
+                </th>
+
+                <th className="px-5 py-3 font-medium">
+                  Status
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {recentCustomers.map((customer) => {
+                const customerPolicy = getCustomerPolicy(
+                  customer.customerId
+                );
+
+                return (
+                  <tr
+                    key={customer.customerId}
+                    className="border-t border-[#f0f2f5] text-[11px] text-[#536274]"
+                  >
+                    <td className="px-5 py-3 font-medium text-[#243b5a]">
+                      {customer.name}
+                    </td>
+
+                    <td className="px-5 py-3">
+                      {customerPolicy?.policyNo || "-"}
+                    </td>
+
+                    <td className="px-5 py-3">
+                      {customerPolicy?.type || "-"}
+                    </td>
+
+                    <td className="px-5 py-3">
+                      <span className="rounded-md bg-[#e7f8f0] px-2 py-1 text-[10px] font-medium text-[#20a46b]">
+                        {customer.status}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -536,6 +690,7 @@ function Dashboard() {
           <div>
             <p className="text-[11px] text-[#2869df] sm:text-[12px]">
               New Offer:
+
               <span className="font-semibold text-[#183254]">
                 {" "}
                 Get 10% extra discount on health insurance policies!
@@ -550,11 +705,12 @@ function Dashboard() {
 
         <button className="flex items-center justify-center gap-2.5 rounded-lg bg-[#2869df] px-5 py-2.5 text-[11px] font-semibold text-white transition hover:bg-[#1f5dcc]">
           View Details
+
           <ArrowRight size={14} />
         </button>
       </div>
-    </Layout>
+    </>
   );
 }
 
-export default Dashboard;
+export default DashboardHome;
