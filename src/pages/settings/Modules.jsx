@@ -5,7 +5,6 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import Layout from "../../components/Layout";
 import { useApp } from "../../context/AppContext";
 
 function Modules() {
@@ -72,7 +71,7 @@ function Modules() {
   };
 
   return (
-    <Layout>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -309,7 +308,7 @@ function Modules() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 }
 

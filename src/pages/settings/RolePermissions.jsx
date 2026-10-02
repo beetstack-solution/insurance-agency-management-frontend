@@ -4,7 +4,6 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import Layout from "../../components/Layout";
 import { useApp } from "../../context/AppContext";
 
 function RolePermissions() {
@@ -20,7 +19,7 @@ function RolePermissions() {
     useState("Admin");
 
   return (
-    <Layout>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-[24px] font-bold text-[#102b52]">
@@ -142,7 +141,7 @@ function RolePermissions() {
           </div>
         </div>
       </div>
-    </Layout>
+    </>
   );
 }
 
