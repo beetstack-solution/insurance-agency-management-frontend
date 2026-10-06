@@ -1,15 +1,12 @@
-import { Navigate } from "react-router";
+import { Navigate, useLocation } from "react-router";
+import { useSelector } from "react-redux";
 
 function ProtectedRoute({ children }) {
-  const isLoggedIn = localStorage.getItem("isLoggedIn");
+  const { isAuthenticated } = useSelector((state) => state.auth);
+  const location = useLocation();
 
-  if (!isLoggedIn) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    );
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   return children;
