@@ -1,9 +1,21 @@
+// src/api/axiosInstance.js
 import axios from "axios";
 
 // ================= ENV CONFIG =================
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 const API_KEY = import.meta.env.VITE_API_KEY || "your-x-api-key";
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "1.0.0";
+
+// ================= STORAGE KEYS =================
+export const STORAGE_KEYS = {
+  TOKEN: "accessToken",
+  REFRESH: "refreshToken",
+  USER: "user",
+  RBAC: "rbac",
+  INSURANCE_TYPE: "selectedInsuranceType",
+  IS_LOGGED_IN: "isLoggedIn",
+};
 
 // ================= AXIOS INSTANCE =================
 const axiosInstance = axios.create({
@@ -17,20 +29,29 @@ const axiosInstance = axios.create({
 });
 
 // ================= TOKEN HELPERS =================
-export const getAccessToken = () => localStorage.getItem("accessToken");
-export const getRefreshToken = () => localStorage.getItem("refreshToken");
+export const getAccessToken = () =>
+  localStorage.getItem(STORAGE_KEYS.TOKEN);
 
-export const setTokens = ({ accessToken, refreshToken }) => {
-  if (accessToken) localStorage.setItem("accessToken", accessToken);
-  if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+export const getRefreshToken = () =>
+  localStorage.getItem(STORAGE_KEYS.REFRESH);
+
+export const setTokens = ({ accessToken, refreshToken } = {}) => {
+  if (accessToken) localStorage.setItem(STORAGE_KEYS.TOKEN, accessToken);
+  if (refreshToken) localStorage.setItem(STORAGE_KEYS.REFRESH, refreshToken);
 };
 
-export const clearTokens = () => {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("user");
-  localStorage.removeItem("rbac");
+export const setAuthData = ({ user, rbac } = {}) => {
+  if (user) localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+  if (rbac) localStorage.setItem(STORAGE_KEYS.RBAC, JSON.stringify(rbac));
+  localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, "true");
 };
+
+export const clearAuth = () => {
+  Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
+};
+
+// Backwards-compat alias (in case any file still imports clearTokens)
+export const clearTokens = clearAuth;
 
 // ================= REQUEST INTERCEPTOR =================
 axiosInstance.interceptors.request.use(
@@ -61,8 +82,8 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Skip refresh for login & refresh endpoints
-    const skipUrls = ["/auth/login", "/auth/refresh-token"];
+    // Skip refresh for auth endpoints
+    const skipUrls = ["/auth/login", "/auth/refresh-token", "/auth/logout"];
     if (skipUrls.some((url) => originalRequest?.url?.includes(url))) {
       return Promise.reject(error);
     }
@@ -103,7 +124,7 @@ axiosInstance.interceptors.response.use(
 
         if (!newAccessToken) throw new Error("Invalid refresh response");
 
-        localStorage.setItem("accessToken", newAccessToken);
+        localStorage.setItem(STORAGE_KEYS.TOKEN, newAccessToken);
         axiosInstance.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
         processQueue(null, newAccessToken);
 
@@ -111,7 +132,7 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
       } catch (err) {
         processQueue(err, null);
-        clearTokens();
+        clearAuth();
         window.location.href = "/login";
         return Promise.reject(err);
       } finally {

@@ -12,31 +12,78 @@ import {
   Loader2,
 } from "lucide-react";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router";
 import { useAuth } from "../../store/hooks/useAuth";
 
-function Login() {
+export default function Login() {
   const { login, loading, error, resetError, isAuthenticated } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [emailOrMobile, setEmailOrMobile] = useState("");
   const [password, setPassword] = useState("");
 
-  // Clear error when user types
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/dashboard";
+
+  /* Clear error on typing */
   useEffect(() => {
     if (error) resetError();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emailOrMobile, password]);
 
+  /* Redirect after successful login */
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, from]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!emailOrMobile || !password) return;
-    await login(emailOrMobile, password);
-  };
 
-  if (isAuthenticated) {
-    // Will be handled by redirect in hook
-  }
+    try {
+      // login() returns the raw `data` object: { user, rbac, accessToken, refreshToken }
+      const data = await login(emailOrMobile, password);
+
+      // ── Split storage: user / rbac / insurance type / tokens ──
+      if (data?.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+
+      if (data?.rbac) {
+        localStorage.setItem("rbac", JSON.stringify(data.rbac));
+
+        // Auto-select first insurance type so sidebar isn't empty
+        const first = data.rbac.insuranceTypes?.[0];
+        if (first) {
+          localStorage.setItem(
+            "selectedInsuranceType",
+            JSON.stringify({
+              id: first.id,
+              name: first.insuranceTypeName,
+              nameAlias: first.nameAlias,
+              code: first.code,
+            }),
+          );
+        }
+      }
+
+      if (data?.accessToken) localStorage.setItem("accessToken", data.accessToken);
+      if (data?.refreshToken) localStorage.setItem("refreshToken", data.refreshToken);
+      localStorage.setItem("isLoggedIn", "true");
+
+      // Let useRbac refresh its state immediately
+      window.dispatchEvent(new Event("rbac-updated"));
+
+      // Redirect handled by useEffect above (isAuthenticated flips)
+    } catch (err) {
+      // Error already captured in redux; nothing to do here
+      console.error("[Login] failed:", err);
+    }
+  };
 
   return (
     <div className="w-full min-h-screen flex bg-white">
@@ -129,6 +176,7 @@ function Login() {
                   onChange={(e) => setEmailOrMobile(e.target.value)}
                   placeholder="Enter your email"
                   required
+                  autoComplete="email"
                   className="w-full pl-12 pr-4 py-3.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#5650e6]/20 focus:border-[#5650e6]"
                 />
               </div>
@@ -150,19 +198,21 @@ function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
+                  autoComplete="current-password"
                   className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#5650e6]/20 focus:border-[#5650e6]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  tabIndex={-1}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
 
-            {/* Error Message */}
+            {/* Error */}
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">
                 {typeof error === "string" ? error : JSON.stringify(error)}
@@ -172,10 +222,7 @@ function Login() {
             {/* Remember / Forgot */}
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 accent-[#5650e6]"
-                />
+                <input type="checkbox" className="w-4 h-4 accent-[#5650e6]" />
                 Remember me
               </label>
               <button
@@ -186,7 +233,7 @@ function Login() {
               </button>
             </div>
 
-            {/* Login Button */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
@@ -206,7 +253,7 @@ function Login() {
             </button>
           </form>
 
-          {/* Google Login */}
+          {/* Google */}
           <div className="mt-8">
             <div className="relative flex items-center">
               <div className="flex-grow border-t border-gray-200" />
@@ -223,14 +270,10 @@ function Login() {
 
           <p className="text-center text-sm text-gray-500 mt-8">
             Need help?{" "}
-            <span className="text-[#5650e6] font-medium">
-              Contact Support
-            </span>
+            <span className="text-[#5650e6] font-medium">Contact Support</span>
           </p>
         </div>
       </div>
     </div>
   );
 }
-
-export default Login;

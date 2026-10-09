@@ -1,67 +1,28 @@
-import { Navigate, Route, Routes } from "react-router";
-
-import Login from "./pages/Login-Page/Login";
-
-import Layout from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
-
-import DashboardHome from "./pages/DashboardHome";
-import Policies from "./pages/Policies";
-import Customers from "./pages/Customers";
-import Claims from "./pages/Claims";
-import Renewals from "./pages/Renewals";
-import Reports from "./pages/Reports";
-
-// Settings
-import Users from "./pages/Settings-Page/Users";
-import Roles from "./pages/Settings-Page/Roles";
-import Permissions from "./pages/Settings-Page/Permissions";
-import InsuranceTypes from "./pages/Settings-Page/InsuranceTypes";
-import Modules from "./pages/Settings-Page/Modules";
-import ModuleActions from "./pages/Settings-Page/ModuleActions";
-import ModuleTypes from "./pages/Settings-Page/ModuleTypes";
-import RolePermissions from "./pages/Settings-Page/RolePermissions";
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { syncFromStorage } from "./store/slices/authSlice";
+import IndexRouter from "./routes/indexRouter";
 
 function App() {
-  return (
-    <Routes>
-      {/* LOGIN */}
-      <Route path="/login" element={<Login />} />
+  const dispatch = useDispatch();
 
-      {/* PROTECTED AREA */}
-      <Route
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="/dashboard" element={<DashboardHome />} />
-        <Route path="/policies" element={<Policies />} />
-        <Route path="/customers" element={<Customers />} />
-        <Route path="/claims" element={<Claims />} />
-        <Route path="/renewals" element={<Renewals />} />
-        <Route path="/reports" element={<Reports />} />
+  /* Global cross-tab sync — runs exactly once for the whole app */
+  useEffect(() => {
+    const sync = (e) => {
+      if (
+        e.key === null ||
+        ["rbac", "user", "selectedInsuranceType", "accessToken"].includes(
+          e.key
+        )
+      ) {
+        dispatch(syncFromStorage());
+      }
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, [dispatch]);
 
-        {/* SETTINGS */}
-        <Route path="/settings/users" element={<Users />} />
-        <Route path="/settings/roles" element={<Roles />} />
-        <Route path="/settings/permissions" element={<Permissions />} />
-        <Route path="/settings/insurance-types" element={<InsuranceTypes />} />
-        <Route path="/settings/modules" element={<Modules />} />
-        <Route path="/settings/module-actions" element={<ModuleActions />} />
-        <Route path="/settings/module-types" element={<ModuleTypes />} />
-        <Route
-          path="/settings/role-permissions"
-          element={<RolePermissions />}
-        />
-      </Route>
-
-      {/* DEFAULT */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
-  );
+  return <IndexRouter />;
 }
 
 export default App;
